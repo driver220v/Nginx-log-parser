@@ -4,6 +4,9 @@ import logging
 import gzip
 import os
 from time import time
+import concurrent.futures
+
+start = time()
 
 
 # Estimate time of program execution
@@ -16,6 +19,7 @@ def time_dec(original_func):
         print(f'function {original_func.__name__} executed in {dif} second')  # visualize process
         info = f'function {original_func.__name__} executed in {dif} second'
         return res
+
     return wrapper
 
 
@@ -141,9 +145,44 @@ def build_report(url_vals, log_path):
     os.makedirs(os.path.dirname(log_path), exist_ok=True)  # create intermediate directories
     with open(report_path, "w") as rf:
         rf.write(report_text)
+all()
+
+def write_to_file(logs):
+    if os.path.isfile('logs_result_threaded_new.txt'):
+
+        with open(r'logs_result_threaded_new.txt', 'a') as lg_thread:
+            for log in logs:
+                lg_thread.write(log)
+                lg_thread.write('\n')
+                # just to make sure data is written correctly
+            lg_thread.write(
+                '__This line determines, that data from next data file has been written or end of the file__')
+            lg_thread.write('\n')
+    else:
+        with open(r'logs_result_threaded_new.txt', 'w') as lg_thread:
+            for log in logs:
+                lg_thread.write(log)
+                lg_thread.write('\n')
+                # just to make sure data is written correctly
+            lg_thread.write(
+                '__This line determines, that data from next data file has been written or end of the file__')
+            lg_thread.write('\n')
 
 
-path = r'nginx-access-ui.log-20170630.gz'
+def concurrent_execute(path_lst):
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        result = [executor.submit(log_analyzer, log_file) for log_file in path_lst]
+        for f in concurrent.futures.as_completed(result):
+            write_to_file(f.result())
+
+
+result_log_analyzer = []
+path = [r'nginx-access-ui.log.gz', r'nginx-access-ui.log-2.gz', r'nginx-access-ui.log-3.gz']
 report_path = r'/home/driver220/log_reports/report_ver2.html'
-url_vals = log_analyzer(path)
-build_report(url_vals, report_path)
+concurrent_execute(path)
+# url_vals = log_analyzer(path)
+# print(url_vals)
+# build_report(url_vals, report_path)
+end = time()
+
+print(end - start)
